@@ -76,4 +76,5 @@ variable "inputs" {
 variable "admin_password" {
   type = string
   description = "Password for the SQL Managed Instance administrator"
+  default     = random_password.admin_password.result
 }

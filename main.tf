@@ -10,6 +10,13 @@ data "azurerm_subnet" "sqlmi" {
 }
 
 
+###create a random password of the administrator password
+resource "random_password" "admin_password" {
+  length  = 16
+  special = true
+}
+
+
 ####resource block for sqlmi
 resource "azurerm_mssql_managed_instance" "mssqlmi" {
   for_each = {
@@ -40,7 +47,7 @@ resource "azurerm_mssql_managed_instance" "mssqlmi" {
 ####data block for primary sqlmi 
 data "azurerm_mssql_managed_instance" "sqlmi_primary" {
   for_each = {
-     for k, v in var.inputs.sqlmi_fg : k => v 
+     for k, v in var.inputs.sqlmi_fg : k => v if v.primary != null && v.primary_rg !=null
   }
   name                = each.value.primary
   resource_group_name = each.value.primary_rg
@@ -50,7 +57,7 @@ data "azurerm_mssql_managed_instance" "sqlmi_primary" {
 ####data block for secondary sqlmi 
 data "azurerm_mssql_managed_instance" "sqlmi_secondary" {
   for_each = {
-     for k, v in var.inputs.sqlmi_fg : k => v 
+     for k, v in var.inputs.sqlmi_fg : k => v if v.secondary != null && v.secondary_rg !=null
   }
   name                = each.value.secondary
   resource_group_name = each.value.secondary_rg
@@ -60,7 +67,7 @@ data "azurerm_mssql_managed_instance" "sqlmi_secondary" {
 ####resource block for sqlmi failover group
 resource "azurerm_mssql_managed_instance_failover_group" "sqlmi_fg" {
   for_each = {
-    for k, v in var.inputs.sqlmi_fg : k => v
+    for k, v in var.inputs.sqlmi_fg : k => v 
   }
   name                        = each.key
   location                    = var.inputs.location
@@ -80,7 +87,7 @@ resource "azurerm_mssql_managed_instance_failover_group" "sqlmi_fg" {
 ####datablock for keyvault
 data "azurerm_key_vault" "sqlmi" {
     for_each = {
-      for k, v in var.inputs.sqlmi : k => v 
+      for k, v in var.inputs.sqlmi : k => v if v.keyvault != null
     }
     name                = each.value.keyvault
     resource_group_name = each.value.keyvault_rg
@@ -91,7 +98,7 @@ data "azurerm_key_vault" "sqlmi" {
 ####datablock for keyvault key
 data "azurerm_key_vault_key" "sqlmi" {
     for_each = {
-      for k, v in var.inputs.sqlmi : k => v 
+      for k, v in var.inputs.sqlmi : k => v if v.keyvault != null
     }
     key_vault_id        = data.azurerm_key_vault.sqlmi[each.key].id
     name                = each.value.keyvault_key
@@ -103,7 +110,7 @@ data "azurerm_key_vault_key" "sqlmi" {
 ####resource block for sqlmi transparent data encryption
 resource "azurerm_mssql_managed_instance_transparent_data_encryption" "sqlmi" {
   for_each = {
-    for k, v in var.inputs.sqlmi : k => v
+    for k, v in var.inputs.sqlmi : k => v if v.keyvault != null
   }
   
   managed_instance_id = try(azurerm_mssql_managed_instance.mssqlmi[each.key].id,null)
